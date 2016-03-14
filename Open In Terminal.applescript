@@ -1,6 +1,16 @@
 (*
-OpenInTerminal v1.3
-Copyright (c) 2009-2010 Jason Jackson
+Open In Terminal v1.4 (Mavericks)
+
+This is a Finder-toolbar script, which opens Terminal windows conveniently.
+To build it as an application, run build.sh; Open In Terminal.app will be created.
+To install the application, hold the Cmd key down and drag it into your Finder toolbar.
+
+When its icon is clicked on in the toolbar of a Finder window, it opens a new Terminal window,
+or tab if the fn key is down, and switches the shell's current working directory
+to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
+each dropped folder will be opened in a Terminal window, or tab if the fn key is down.
+
+Copyright (c) 2009-2014 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -14,102 +24,117 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see <http://www.gnu.org/licenses/>.
 *)
 
--- Whether to open new tabs instead of new windows, when possible.
+-- Whether to open new tabs instead of new windows, by default (boolean).
+-- However this is set, press the fn key while clicking the icon in your Finder toolbar,
+-- or while dragging and dropping icons onto it, to invert the behavior.
 property useTabsByDefault : false
 
--- Whether to try to reuse existing windows/tabs, if they're not busy.
-property useExistingByDefault : false
-
--- How to tell the shell to change its working directory; e.g. "cd", "pushd", or whatever else you like.
+-- How to tell the shell to change its working directory, e.g. "cd", "pushd", or whatever else you like.
 property changeDirectoryCommand : "cd"
 
--- How to tell the shell to clear its screen; e.g. "clear"; use the empty string for no screen clearing.
+-- How to tell the shell to clear its screen after changing its working directory,
+-- e.g. "clear"; set to an empty string for no screen clearing.
 property clearScreenCommand : ""
-
--- Whether to always try to open the "canonical" version of a Finder path,
--- e.g. "/Volumes/Stash" if Finder reports the window's current path as "/Volumes/Stash-1" and "/Volumes/Stash" exists.
-property useCanonicalPath : false
-
 
 (*
 Opens a Terminal window/tab in the frontmost Finder window's directory,
-when the script's toolbar icon is clicked in Finder, or when it is launched directly by the user.
+when the script's toolbar icon is clicked in Finder (or when it is launched directly).
 *)
 on run
+	set openTab to my UseTabsThisTime()
+	
+	set errorMessage to ""
+	set errorIsUnexpected to false
+	
 	tell application "Finder"
 		try
-			-- this will fail if there isn't any frontmost Finder window
+			-- this will raise an error if there isn't any frontmost Finder window,
+			-- or it's not an ordinary file-browser window (e.g. preferences, information window, etc)
 			set currentFolder to (the target of the front window)
 			
 			try
-				-- this will fail if the frontmost Finder window is for the trash, network, or a Spotlight search
+				-- this will raise an error if the frontmost Finder window is showing this computer's pseudo-folder,
+				-- the Trash, the Network pseudo-folder, or a Spotlight search
 				set currentFolder to currentFolder as alias
 				
-			on error errorMessage
-				if errorMessage contains "class pcmp" then
+			on error systemErrorMessage
+				if systemErrorMessage contains "No result was returned" or systemErrorMessage contains "class pcmp" then
+					-- the frontmost Finder window is showing this computer's pseudo-folder (the computer's name);
+					-- Mavericks raises the error "No result was returned from some part of this expression",
+					-- and Snow Leopard raises an error containing "class pcmp"; hopefully Lion & Mountain Lion
+					-- each do one of those two things too, but I don't know for sure
 					set currentFolder to (":Volumes" as alias) -- closest analogue for "this computer"
 					
-				else if errorMessage contains "class cfol" and the front window's name is "Trash" then
+				else if systemErrorMessage contains "class cfol" and the front window's name is "Trash" then
 					set currentFolder to (path to trash as alias)
 					
 				else
-					if errorMessage contains "class alia" then
-						set details to "Spotlight searches aren't actually on-disk folders, so they can't be opened in Terminal."
-						set buttonText to "Bummer"
-					else if errorMessage contains "class cfol" then
-						set details to "The network folder and its immediate subfolders aren't actually on-disk folders, so they can't be opened in Terminal."
-						set buttonText to "Bummer"
+					if systemErrorMessage contains "class alia" then
+						set errorMessage to "Spotlight searches aren't actually on-disk folders, so they can't be opened in Terminal."
+						
+					else if systemErrorMessage contains "class cfol" then
+						set errorMessage to "The Network folder and its immediate subfolders aren't actually on-disk folders, so they can't be opened in Terminal."
+						
 					else
-						set details to "For some unknown reason, this folder just can't be opened in Terminal. Could be a bug. Sorry."
-						set buttonText to "That Sucks"
+						set errorMessage to "For some unknown reason, this folder just can't be opened in Terminal. Sorry."
+						set errorIsUnexpected to true
 					end if
-					
-					try
-						activate
-						display alert "Folder can't be opened in Terminal" as warning message details buttons {buttonText} default button 1 cancel button 1 giving up after 120
-						return
-					on error
-						-- we catch errors and return here so that escape can be used to close the alert dialog
-						return
-					end try
 				end if
 			end try
 		on error
-			-- there is no frontmost Finder window (including minimized windows & windows in other spaces);
-			-- open a Terminal window, but don't change its directory
+			-- there is no frontmost Finder window (including minimized windows & windows in other spaces),
+			-- or it's not an ordinary file-browser window; open a Terminal window/tab, but don't change its directory
 			set currentFolder to ""
 		end try
 	end tell
 	
-	my OpenFolderInTerminal(currentFolder)
+	if errorMessage is not "" then
+		display alert "Folder Can't Be Opened in Terminal" as critical message errorMessage
+		return
+	end if
+	
+	my OpenFolderInTerminal(currentFolder, openTab)
 end run
 
 (*
-Opens a Terminal window/tab for each folder dropped onto the icon.
+Opens a Terminal window/tab for each folder dropped onto the script's icon.
 *)
 on open droppedItems
+	set openTabs to my UseTabsThisTime()
 	set folderWasDropped to false
 	
 	repeat with droppedItem in droppedItems
 		set droppedItem to droppedItem as alias
 		
 		if my ItemIsAFolder(droppedItem) then
-			my OpenFolderInTerminal(droppedItem)
+			my OpenFolderInTerminal(droppedItem, openTabs)
 			set folderWasDropped to true
 		end if
 	end repeat
 	
 	if folderWasDropped is false then
-		try
-			activate
-			display alert "No folders to open" as warning message "Only folders dropped on the icon will be opened in Terminal; you dropped some items on the icon, but none of them were folders." buttons "Okay" default button 1 cancel button 1 giving up after 120
-			return
-		on error
-			-- we catch errors and return here so that escape can be used to close the error dialog, by cancelling it
-			return
-		end try
+		display alert "No Folders to Open" as critical message "Only folders dropped on the icon can be opened in Terminal; you dropped some items on the icon, but none of them were folders."
 	end if
 end open
+
+(*
+Finds out which modifier keys are currently down, and uses that information,
+plus the useTabsByDefault property, to decide whether to use tabs this time.
+*)
+on UseTabsThisTime()
+	set checkModifierKeysPath to POSIX path of (path to me) & "Contents/Resources/modifier-keys"
+	set modifierKeys to do shell script "\"" & checkModifierKeysPath & "\""
+	
+	if modifierKeys contains "fn" then
+		-- the fn key is down, invert the default setting
+		set useTabs to not useTabsByDefault
+	else
+		-- use the default setting
+		set useTabs to useTabsByDefault
+	end if
+	
+	return useTabs
+end UseTabsThisTime
 
 (*
 Determines whether or not an item is a folder.
@@ -117,131 +142,69 @@ theItem should be passed as an alias.
 *)
 on ItemIsAFolder(theItem)
 	tell application "Finder"
-		if theItem's POSIX path ends with "/" then return true
-		return false
+		if theItem's POSIX path ends with "/" then
+			return true
+		else
+			return false
+		end if
 	end tell
 end ItemIsAFolder
 
 (*
-Opens a Terminal window or tab (based on the properties configured above),
-and changes the shell's working directory to the passed folder (if applicable).
-theFolder should be passed as an alias, and MUST be a folder, not a regular file.
+Opens a Terminal window/tab, and changes the shell's working directory to the passed folder (if applicable;
+if theFolder is an empty string, the window/tab will be opened but no cd command issued to it).
+
+theFolder = The folder to cd to; should be passed as an alias, and must be a folder, not a regular file.
+openTab = Open a tab instead of a window, if a window is already open? (boolean)
 *)
-on OpenFolderInTerminal(theFolder)
+on OpenFolderInTerminal(theFolder, openTab)
 	if theFolder is not "" then
 		set theFolder to POSIX path of theFolder
-		
-		-- if canonical paths were requested and this isn't one, deal with that
-		if useCanonicalPath then
-			set theFolderName to (theFolder as string)
-			
-			if theFolderName's length > 1 then
-				set secondLastCharacter to character ((theFolderName's length) - 1) of theFolderName
-				set thirdLastCharacter to character ((theFolderName's length) - 2) of theFolderName
-				
-				if thirdLastCharacter is "-" and my CharacterIsADigit(secondLastCharacter) then
-					set theFolderName to (get characters 1 thru ((theFolderName's length) - 3) of theFolderName as string)
-					set theFolder to (POSIX path of theFolderName as text) & "/"
-				end if
-			end if
-		end if
 	end if
 	
-	set alreadyRunning to my LaunchTerminal()
-	
-	if not alreadyRunning then
-		set useExisting to true
-	else
-		set useExisting to useExistingByDefault
-	end if
-	
-	set useTabs to useTabsByDefault
+	set shellScript to my BuildShellScript(theFolder)
+	set wasAlreadyRunning to my LaunchTerminal()
 	
 	tell application "Terminal"
 		activate
-		set shellScript to my BuildShellScript(theFolder)
 		
 		if (count of windows) is 0 then
 			if shellScript is not "" then
 				-- this will open a new window as a side effect
 				do script with command shellScript
 			else
+				-- no shell script to run, just open a window
 				my OpenNewTerminalWindow()
 			end if
 		else
-			-- we need to open a new window/tab, unless we want to reuse existing ones and can do so
-			set openNew to true
-			
-			if useExisting then
-				-- try to find a tab in a window which isn't busy, so we can reuse it
-				set foundExisting to false
-				set windowNum to 1 -- windows are numbered from front to back
-				
-				repeat while windowNum ² (count of windows)
-					-- tabs are numbered in the order opened, so check the selected tab first
-					if window windowNum's selected tab is not busy then
-						set window windowNum's frontmost to true -- (sets the window's number to 1)
-						
-						set openNew to false
-						set foundExisting to true
-					else
-						set tabNum to 1
-						
-						repeat while tabNum ² ((count of tabs) of window windowNum)
-							if window windowNum's tab tabNum is not busy then
-								set window windowNum's tab tabNum's selected to true
-								set window windowNum's frontmost to true -- (sets the window's number to 1)
-								
-								set openNew to false
-								set foundExisting to true
-								exit repeat
-							end if
-							
-							set tabNum to tabNum + 1
-						end repeat
-					end if
-					
-					if foundExisting then exit repeat
-					set windowNum to windowNum + 1
-				end repeat
-			end if
-			
-			if openNew then
-				if useTabs then
+			-- open a new window/tab, unless Terminal just started up (in which case it just opened a window itself)
+			if wasAlreadyRunning then
+				if openTab then
 					my OpenNewTerminalTab()
 				else
 					my OpenNewTerminalWindow()
 				end if
+				
+				-- delay briefly, in case new windows/tabs open with "same working directory",
+				-- so that our cd command will be sent after Terminal's own
+				delay 0.2
 			end if
 			
-			-- regardless of whether we just made an existing window/tab frontmost, or opened a new one,
 			-- send any applicable shell script to it
-			if shellScript is not "" then do script with command shellScript in window 1
+			if shellScript is not "" then do script with command shellScript in front window
 		end if
 	end tell
 end OpenFolderInTerminal
 
 (*
-Determines whether or not a given character is a digit, returning true or false.
-*)
-on CharacterIsADigit(theCharacter)
-	try
-		set theDigit to (theCharacter as number)
-		return true
-	on error
-		return false
-	end try
-end CharacterIsADigit
-
-(*
 Builds a shell script which will change the working directory to the passed path (if applicable),
-using the change-directory command configured above, and optionally also clear the shell's screen, if so configured above.
+using the change-directory command configured above, and/or optionally clear the shell's screen, if so configured above.
 theFolder should be passed as an alias.
 *)
 on BuildShellScript(theFolder)
 	if theFolder is not "" then
 		set shellScript to (changeDirectoryCommand & " " & quoted form of theFolder)
-		if clearScreenCommand is not "" then set shellScript to shellScript & " ; " & clearScreenCommand
+		if clearScreenCommand is not "" then set shellScript to shellScript & "; " & clearScreenCommand
 	else if clearScreenCommand is not "" then
 		set shellScript to clearScreenCommand
 	else
@@ -268,6 +231,7 @@ end OpenNewTerminalTab
 (*
 Launches the Terminal application if needed, waiting until it's completed launching to return;
 if Terminal is already running, this returns immediately.
+Returns a variable indicating whether Terminal was already running.
 *)
 on LaunchTerminal()
 	tell application "System Events"
