@@ -4,8 +4,8 @@
 script_name="Open In Terminal.applescript"
 bundle_name="Open In Terminal.app"
 bundle_id="com.apple.ScriptEditor.id.OpenInTerminal"
-version="1.4"
-copyright="Copyright © 2009-2014 Jason Jackson"
+version="1.5"
+copyright="Copyright © 2009-2015 Jason Jackson"
 
 # --- Utilities ---
 

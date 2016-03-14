@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.4 (Mavericks)
+Open In Terminal v1.5 (Yosemite)
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -10,7 +10,7 @@ or tab if the fn key is down, and switches the shell's current working directory
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
 each dropped folder will be opened in a Terminal window, or tab if the fn key is down.
 
-Copyright (c) 2009-2014 Jason Jackson
+Copyright (c) 2009-2015 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -163,35 +163,30 @@ on OpenFolderInTerminal(theFolder, openTab)
 	end if
 	
 	set shellScript to my BuildShellScript(theFolder)
-	set wasAlreadyRunning to my LaunchTerminal()
+	set alreadyRunning to my TerminalIsRunning()
 	
 	tell application "Terminal"
-		activate
+		activate -- will open a window iff Terminal wasn't already running
 		
-		if (count of windows) is 0 then
-			if shellScript is not "" then
-				-- this will open a new window as a side effect
-				do script with command shellScript
+		if alreadyRunning then
+			if openTab then
+				delay 1 -- or the new tab won't get opened
+				tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down} -- new tab
+				do script with command shellScript in front window
 			else
-				-- no shell script to run, just open a window
-				my OpenNewTerminalWindow()
+				-- "do script" without "in front window" will open a new window
+				do script with command shellScript
 			end if
 		else
-			-- open a new window/tab, unless Terminal just started up (in which case it just opened a window itself)
-			if wasAlreadyRunning then
-				if openTab then
-					my OpenNewTerminalTab()
-				else
-					my OpenNewTerminalWindow()
-				end if
-				
+			-- Terminal just started up, and opened a new window
+			if shellScript is not "" then
 				-- delay briefly, in case new windows/tabs open with "same working directory",
 				-- so that our cd command will be sent after Terminal's own
-				delay 0.2
+				delay 1
+				
+				-- run the shell script in the front & only window
+				do script with command shellScript in front window
 			end if
-			
-			-- send any applicable shell script to it
-			if shellScript is not "" then do script with command shellScript in front window
 		end if
 	end tell
 end OpenFolderInTerminal
@@ -215,38 +210,13 @@ on BuildShellScript(theFolder)
 end BuildShellScript
 
 (*
-Opens a new Terminal window.
+Determines whether or not the Terminal application is already running.
 *)
-on OpenNewTerminalWindow()
-	tell application "System Events" to tell process "Terminal" to keystroke "n" using command down
-end OpenNewTerminalWindow
-
-(*
-Opens a new Terminal tab, in its frontmost window.
-*)
-on OpenNewTerminalTab()
-	tell application "System Events" to tell process "Terminal" to keystroke "t" using command down
-end OpenNewTerminalTab
-
-(*
-Launches the Terminal application if needed, waiting until it's completed launching to return;
-if Terminal is already running, this returns immediately.
-Returns a variable indicating whether Terminal was already running.
-*)
-on LaunchTerminal()
+on TerminalIsRunning()
 	tell application "System Events"
 		set alreadyRunning to (name of processes) contains "Terminal"
 	end tell
 	
-	if not alreadyRunning then
-		launch application "Terminal"
-		
-		tell application "Terminal"
-			repeat while (count of windows) is 0
-				delay 0.1
-			end repeat
-		end tell
-	end if
-	
 	return alreadyRunning
-end LaunchTerminal
+end TerminalIsRunning
+
