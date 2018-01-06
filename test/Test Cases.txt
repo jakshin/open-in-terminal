@@ -1,24 +1,24 @@
-Shown in front Finder window		Expected Result
+Shown in front Finder window        Expected Result
 ----------------------------------- -----------------------------------------------------
-an arbitrary folder					open the folder
-Macintosh HD						open /
-Trash								open ~/.Trash
-iCloud Drive						open ~/Library/Mobile Documents/com~apple~CloudDocs
-Dropbox								open ~/Dropbox
-the computer's name under Devices	open /Volumes
-a shared network folder				open the network folder
+an arbitrary folder                 open the folder
+Macintosh HD                        open /
+Trash                               open ~/.Trash
+iCloud Drive                        open ~/Library/Mobile Documents/com~apple~CloudDocs
+Dropbox                             open ~/Dropbox
+the computer's name under Devices   open /Volumes
+a shared network folder             open the network folder
 
-Network								alert about Network folder
-AirDrop								alert about AirDrop folder
-a device under Shared				alert about network devices
-All My Files						alert about All My Files
-All Tags...							alert about Spotlight/tag searches
-a tag								alert about Spotlight/tag searches
-a Spotlight search					alert about Spotlight/tag searches
+Network                             alert about Network folder
+AirDrop                             alert about AirDrop folder
+a device under Shared               alert about network devices
+All My Files                        alert about All My Files
+All Tags...                         alert about Spotlight/tag searches
+a tag                               alert about Spotlight/tag searches
+a Spotlight search                  alert about Spotlight/tag searches
 
-a file Info window is fronmost		open Terminal without changing directory
-a View Options window is frontmost	open Terminal without changing directory
-Finder's Preferences is frontmost	open Terminal without changing directory
-all Finder windows are minimized	open Terminal in folder of one of the windows
-no Finder window in this space		open Terminal in folder of window from another space
-no Finder window in any space		open Terminal without changing directory
+a file Info window is fronmost      open Terminal without changing directory
+a View Options window is frontmost  open Terminal without changing directory
+Finder's Preferences is frontmost   open Terminal without changing directory
+all Finder windows are minimized    open Terminal in folder of one of the windows
+no Finder window in this space      open Terminal in folder of window from another space
+no Finder window in any space       open Terminal without changing directory
