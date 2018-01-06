@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.5 (Yosemite, El Capitan)
+Open In Terminal v1.5 (Yosemite, El Capitan, Sierra)
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -10,7 +10,7 @@ or tab if the fn key is down, and switches the shell's current working directory
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
 each dropped folder will be opened in a Terminal window, or tab if the fn key is down.
 
-Copyright (c) 2009-2015 Jason Jackson
+Copyright (c) 2009-2018 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -42,19 +42,17 @@ when the script's toolbar icon is clicked in Finder (or when it is launched dire
 *)
 on run
 	set openTab to my UseTabsThisTime()
-	
 	set errorMessage to ""
-	set errorIsUnexpected to false
 	
 	tell application "Finder"
 		try
 			-- this will raise an error if there isn't any frontmost Finder window,
 			-- or it's not an ordinary file-browser window (e.g. preferences, information window, etc)
+			set currentName to (the name of the front window)
 			set currentFolder to (the target of the front window)
 			
 			try
-				-- this will raise an error if the frontmost Finder window is showing this computer's pseudo-folder,
-				-- the Trash, the Network pseudo-folder, or a Spotlight search
+				-- this will raise an error if the frontmost Finder window is showing a pseudo-folder
 				set currentFolder to currentFolder as alias
 				
 			on error systemErrorMessage
@@ -70,14 +68,25 @@ on run
 					
 				else
 					if systemErrorMessage contains "class alia" then
-						set errorMessage to "Spotlight searches aren't actually on-disk folders, so they can't be opened in Terminal."
+						if currentName is "All My Files" then
+							set errorMessage to "\"All My Files\" is a Spotlight search, not an on-disk folder, so it can't be opened in Terminal."
+						else
+							set errorMessage to "Spotlight and tag searches aren't actually on-disk folders, so they can't be opened in Terminal."
+						end if
+
+					else if systemErrorMessage contains "class cdis" then
+						set errorMessage to "\"All Tags\" isn't actually an on-disk folder, so it can't be opened in Terminal."
 						
 					else if systemErrorMessage contains "class cfol" then
-						set errorMessage to "The Network folder and its immediate subfolders aren't actually on-disk folders, so they can't be opened in Terminal."
+						if currentName is "AirDrop" or currentName is "Network" then
+							set errorMessage to "\"" & currentName & "\" isn't actually an on-disk folder, so it can't be opened in Terminal."
+						else
+							set errorMessage to "Network devices aren't actually on-disk folders, so they can't be opened in Terminal. Open a folder shared by the device instead."
+						end if
 						
 					else
-						set errorMessage to "For some unknown reason, this folder just can't be opened in Terminal. Sorry."
-						set errorIsUnexpected to true
+						set errorMessage to "For some reason, this folder just can't be opened in Terminal. Sorry."
+						set errorMessage to errorMessage & return & return & "macOS errored this error: " & systemErrorMessage
 					end if
 				end if
 			end try
