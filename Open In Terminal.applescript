@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.5 (Yosemite, El Capitan, Sierra)
+Open In Terminal v1.5 (Yosemite, El Capitan)
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
