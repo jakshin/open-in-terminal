@@ -2,9 +2,9 @@
   <img src="Screenshots/App-Icon.png" alt="Open In Terminal Icon"/>
 </p>
 
-It's frequently handy to switch back and forth between looking at a folder's contents graphically, and running command-line utilities in it. You can switch from command-line mode to graphical mode with a simple `open .` to view your shell's current working directory in Finder, but the reverse isn't as simple.
+It's frequently handy to switch back and forth between looking at a folder's contents graphically, and running command-line utilities in it. You can switch from command-line mode to graphical mode with a simple `open .` to view your shell's current working directory in Finder, but the reverse isn't as easy.
 
-Except now it is: after installing this app as a Finder toolbar button, you can click the icon in (just about) any Finder window to open the current folder in a new Terminal window. Or you can hold the **fn** key down to open the folder in a new Terminal tab.
+*Except now it is!* After installing this app as a Finder toolbar button, you can click the icon in (just about) any Finder window to open a new Terminal window, with your shell's working directory automatically switched Finder's current folder. Or you can hold the **fn** key down as you click, to open the folder in a new Terminal tab, instead of a new window.
 
 
 ## Installation & Setup

@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.5 (Yosemite, El Capitan)
+Open In Terminal v1.6 (macOS Sierra)
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -56,11 +56,9 @@ on run
 				set currentFolder to currentFolder as alias
 				
 			on error systemErrorMessage
-				if systemErrorMessage contains "No result was returned" or systemErrorMessage contains "class pcmp" then
+				if systemErrorMessage contains "No result was returned" then
 					-- the frontmost Finder window is showing this computer's pseudo-folder (the computer's name);
-					-- Mavericks raises the error "No result was returned from some part of this expression",
-					-- and Snow Leopard raises an error containing "class pcmp"; hopefully Lion & Mountain Lion
-					-- each do one of those two things too, but I don't know for sure
+					-- Sierra raises the error "No result was returned from some part of this expression"
 					set currentFolder to (":Volumes" as alias) -- closest analogue for "this computer"
 					
 				else if systemErrorMessage contains "class cfol" and the front window's name is "Trash" then
@@ -73,7 +71,7 @@ on run
 						else
 							set errorMessage to "Spotlight and tag searches aren't actually on-disk folders, so they can't be opened in Terminal."
 						end if
-
+						
 					else if systemErrorMessage contains "class cdis" then
 						set errorMessage to "\"All Tags\" isn't actually an on-disk folder, so it can't be opened in Terminal."
 						
@@ -131,8 +129,17 @@ Finds out which modifier keys are currently down, and uses that information,
 plus the useTabsByDefault property, to decide whether to use tabs this time.
 *)
 on UseTabsThisTime()
-	set checkModifierKeysPath to POSIX path of (path to me) & "Contents/Resources/modifier-keys"
-	set modifierKeys to do shell script "\"" & checkModifierKeysPath & "\""
+	set pathToMe to POSIX path of (path to me)
+	
+	if pathToMe ends with ".app/" then
+		set checkModifierKeysPath to pathToMe & "Contents/Resources/modifier-keys"
+	else
+		-- assume we're running in Script Editor
+		set pathToMyFolder to characters 1 thru -((offset of "/" in (reverse of items of pathToMe as string))) of pathToMe as string
+		set checkModifierKeysPath to pathToMyFolder & "modifier-keys/modifier-keys"
+	end if
+	
+	set modifierKeys to do shell script quoted form of checkModifierKeysPath
 	
 	if modifierKeys contains "fn" then
 		-- the fn key is down, invert the default setting
@@ -179,8 +186,8 @@ on OpenFolderInTerminal(theFolder, openTab)
 		
 		if alreadyRunning then
 			if openTab then
-				delay 1 -- or the new tab won't get opened
 				tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down} -- new tab
+				delay 1 -- so the new tab has time to open
 				do script with command shellScript in front window
 			else
 				-- "do script" without "in front window" will open a new window
@@ -189,10 +196,6 @@ on OpenFolderInTerminal(theFolder, openTab)
 		else
 			-- Terminal just started up, and opened a new window
 			if shellScript is not "" then
-				-- delay briefly, in case new windows/tabs open with "same working directory",
-				-- so that our cd command will be sent after Terminal's own
-				delay 1
-				
 				-- run the shell script in the front & only window
 				do script with command shellScript in front window
 			end if
