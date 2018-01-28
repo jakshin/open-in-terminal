@@ -6,6 +6,8 @@ It's frequently handy to switch back and forth between looking at a folder's con
 
 *Except now it is!* After installing this app as a Finder toolbar button, you can click the icon in (just about) any Finder window to open a new Terminal window, with your shell's working directory automatically switched Finder's current folder. Or you can hold the **fn** key down as you click, to open the folder in a new Terminal tab, instead of a new window.
 
+If you prefer [iTerm](https://iterm2.com) to Apple's Terminal, see [Open in iTerm](https://github.com/jakshin/open-in-iterm).
+
 
 ## Installation & Setup
 
