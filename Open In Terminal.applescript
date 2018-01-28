@@ -62,6 +62,8 @@ on run
 					set currentFolder to (":Volumes" as alias) -- closest analogue for "this computer"
 					
 				else if systemErrorMessage contains "class cfol" and the front window's name is "Trash" then
+					-- items shown by Finder in the Trash can come from various places (e.g. mounted drives, iCloud Drive),
+					-- so we'll just take whatever macOS says is "the path to Trash" (always ~/.Trash as far as I can tell)
 					set currentFolder to (path to trash as alias)
 					
 				else
