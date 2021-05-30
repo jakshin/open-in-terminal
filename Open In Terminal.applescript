@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.7
+Open In Terminal v1.7.1
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -124,7 +124,11 @@ on open droppedItems
 	end repeat
 	
 	if folderWasDropped is false then
-		display alert "No Folders to Open" as critical message "Only folders dropped on the icon can be opened in Terminal; you dropped some items on the icon, but none of them were folders."
+		if (count of droppedItems) is 1 then
+			display alert "That's not a folder" as critical message "Only folders dropped on the icon can be opened in Terminal."
+		else
+			display alert "Those aren't folders" as critical message "Only folders dropped on the icon can be opened in Terminal. Everything you dropped was a file, not a folder."
+		end if
 	end if
 end open
 
