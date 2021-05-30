@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.7.1
+Open In Terminal v1.7.2
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -44,8 +44,9 @@ when the script's toolbar icon is clicked in Finder (or when it is launched dire
 *)
 on run
 	set openTab to my UseTabsThisTime()
-	set errorMessage to ""
+	if openTab is missing value then return
 	
+	set errorMessage to ""
 	tell application "Finder"
 		try
 			-- this will raise an error if there isn't any frontmost Finder window,
@@ -149,7 +150,11 @@ on UseTabsThisTime()
 	
 	set modifierKeys to do shell script quoted form of checkModifierKeysPath
 	
-	if modifierKeys contains "fn" then
+	if modifierKeys contains "option" then
+		-- the Option key is down, and the Finder window will close
+		return missing value
+		
+	else if modifierKeys contains "fn" then
 		-- the fn key is down, invert the default setting
 		set useTabs to not useTabsByDefault
 	else
