@@ -71,7 +71,7 @@ fi
 # remove any existing version of the app bundle, and create a new one
 rm -rf "$bundle_name"
 osacompile -o "$bundle_name" "$script_name"
-echo "Built $bundle_name"
+echo "Compiled $script_name -> $bundle_name"
 
 # copy resources into the bundle
 cp "icon/$icon.icns" "$bundle_name/Contents/Resources/droplet.icns"
