@@ -14,10 +14,10 @@ app's subfolder in iCloud Drive     open ~/Library/Mobile Documents/something/fo
 Dropbox                             open ~/Dropbox
 folder in Dropbox                   open ~/Dropbox/folder
 
-Network                             alert about Network folder
+Recents                             alert about Recents folder
 AirDrop                             alert about AirDrop folder
-a device under Shared               alert about network devices
-All My Files                        alert about All My Files
+Network                             alert about Network folder
+a device under Network              alert about network devices
 All Tags...                         alert about Spotlight/tag searches
 a tag                               alert about Spotlight/tag searches
 a Spotlight search                  alert about Spotlight/tag searches

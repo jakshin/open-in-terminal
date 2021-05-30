@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.6 (macOS Sierra)
+Open In Terminal v1.7
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -10,7 +10,7 @@ or tab if the fn key is down, and switches the shell's current working directory
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
 each dropped folder will be opened in a Terminal window, or tab if the fn key is down.
 
-Copyright (c) 2009-2018 Jason Jackson
+Copyright (c) 2009-2021 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -30,11 +30,13 @@ If not, see <http://www.gnu.org/licenses/>.
 property useTabsByDefault : false
 
 -- How to tell the shell to change its working directory, e.g. "cd", "pushd", or whatever else you like.
-property changeDirectoryCommand : "cd"
+-- Use a leading space to avoid having the command show up in your shell's history
+-- (if you set HISTCONTROL=ignorespace on bash, or use "setopt hist_ignore_space" on zsh).
+property changeDirectoryCommand : " cd"
 
 -- How to tell the shell to clear its screen after changing its working directory,
 -- e.g. "clear"; set to an empty string for no screen clearing.
-property clearScreenCommand : ""
+property clearScreenCommand : "clear; printf '\\e[3J'"
 
 (*
 Opens a Terminal window/tab in the frontmost Finder window's directory,
@@ -58,18 +60,18 @@ on run
 			on error systemErrorMessage
 				if systemErrorMessage contains "No result was returned" then
 					-- the frontmost Finder window is showing this computer's pseudo-folder (the computer's name);
-					-- Sierra raises the error "No result was returned from some part of this expression"
+					-- macOS raises the error "No result was returned from some part of this expression"
 					set currentFolder to (":Volumes" as alias) -- closest analogue for "this computer"
 					
 				else if systemErrorMessage contains "class cfol" and the front window's name is "Trash" then
 					-- items shown by Finder in the Trash can come from various places (e.g. mounted drives, iCloud Drive),
-					-- so we'll just take whatever macOS says is "the path to Trash" (always ~/.Trash as far as I can tell)
+					-- so we'll just use whatever macOS says is "the path to Trash" (always ~/.Trash as far as I can tell)
 					set currentFolder to (path to trash as alias)
 					
 				else
 					if systemErrorMessage contains "class alia" then
-						if currentName is "All My Files" then
-							set errorMessage to "\"All My Files\" is a Spotlight search, not an on-disk folder, so it can't be opened in Terminal."
+						if currentName is "Recents" then
+							set errorMessage to "\"Recents\" is a Spotlight search, not an on-disk folder, so it can't be opened in Terminal."
 						else
 							set errorMessage to "Spotlight and tag searches aren't actually on-disk folders, so they can't be opened in Terminal."
 						end if
@@ -180,42 +182,52 @@ on OpenFolderInTerminal(theFolder, openTab)
 		set theFolder to POSIX path of theFolder
 	end if
 	
-	set shellScript to my BuildShellScript(theFolder)
 	set alreadyRunning to my TerminalIsRunning()
+	if alreadyRunning then
+		set windowCount to my CountTerminalWindows()
+	end if
 	
-	tell application "Terminal"
-		activate -- will open a window iff Terminal wasn't already running
-		
-		if alreadyRunning then
-			if openTab then
-				tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down} -- new tab
-				delay 1 -- so the new tab has time to open
-				do script with command shellScript in front window
-			else
-				-- "do script" without "in front window" will open a new window
-				do script with command shellScript
-			end if
+	if not openTab or not alreadyRunning or windowCount is 0 then
+		if theFolder is not "" then
+			-- this always opens a new Terminal window;
+			-- its shell's CWD is set to the folder, no scripting needed
+			do shell script "open -a Terminal " & quoted form of theFolder
 		else
-			-- Terminal just started up, and opened a new window
-			if shellScript is not "" then
-				-- run the shell script in the front & only window
-				do script with command shellScript in front window
-			end if
+			-- if there are open Terminal windows, but they're all in other spaces,
+			-- this will bring one of those windows to the front, but not switch spaces... oh well,
+			-- it won't come up during indended use (clicking an icon in a Finder window's toolbar)
+			do shell script "open -a Terminal"
 		end if
-	end tell
+	else
+		-- we want a new tab; Terminal is already running, and has a window (though maybe not in this space)
+		
+		-- this brings just one window to the front, opening a new window if there isn't one (in any space),
+		-- unminimized and unhiding if it needs to; like "activate", it DOESN'T switch spaces
+		do shell script "open -a Terminal"
+		delay 0.5
+		
+		-- open a new tab (or a new window, if there's not already one in this space)
+		tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down}
+		delay 0.5 -- so the new tab has time to open
+		
+		set shellScript to my BuildShellScript(theFolder)
+		if shellScript is not "" then
+			tell application "Terminal"
+				do script with command shellScript in front window
+			end tell
+		end if
+	end if
 end OpenFolderInTerminal
 
 (*
 Builds a shell script which will change the working directory to the passed path (if applicable),
-using the change-directory command configured above, and/or optionally clear the shell's screen, if so configured above.
+using the change-directory command configured above, and optionally clear the shell's screen.
 theFolder should be passed as an alias.
 *)
 on BuildShellScript(theFolder)
 	if theFolder is not "" then
 		set shellScript to (changeDirectoryCommand & " " & quoted form of theFolder)
 		if clearScreenCommand is not "" then set shellScript to shellScript & "; " & clearScreenCommand
-	else if clearScreenCommand is not "" then
-		set shellScript to clearScreenCommand
 	else
 		set shellScript to ""
 	end if
@@ -234,3 +246,29 @@ on TerminalIsRunning()
 	return alreadyRunning
 end TerminalIsRunning
 
+(*
+Counts open Terminal windows, or really tabs because that's how Terminal counts windows,
+which is fine for our purposes here, because we only care whether there are zero or not.
+Includes minimized and hidden windows, in any space, but excludes non-shell windows
+like preferences, "New Command" and "New Remote Connection".
+*)
+on CountTerminalWindows()
+	tell application "Terminal"
+		-- Terminal includes "New Command" and "New Remote Connection" once they've been opened,
+		-- even if they were later closed, so we filter them out below
+		set windowCount to count of windows
+		
+		if windowCount is greater than 0 then
+			repeat with win in windows
+				try
+					-- an error is raised when trying to get a non-shell window's selected tab
+					set selectedTab to win's selected tab
+				on error
+					set windowCount to windowCount - 1
+				end try
+			end repeat
+		end if
+	end tell
+	
+	return windowCount
+end CountTerminalWindows
