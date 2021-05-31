@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.7.3
+Open In Terminal v1.7.4
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -84,7 +84,8 @@ on run
 						if currentName is "AirDrop" or currentName is "Network" then
 							set errorMessage to "\"" & currentName & "\" isn't actually an on-disk folder, so it can't be opened in Terminal."
 						else
-							set errorMessage to "Network devices aren't actually on-disk folders, so they can't be opened in Terminal. Open a folder shared by the device instead."
+							set errorMessage to "Network devices aren't actually on-disk folders, so they can't be opened in Terminal. " & Â
+								"Open a folder shared by the device instead."
 						end if
 						
 					else
@@ -128,7 +129,8 @@ on open droppedItems
 		if (count of droppedItems) is 1 then
 			display alert "That's not a folder" as critical message "Only folders dropped on the icon can be opened in Terminal."
 		else
-			display alert "Those aren't folders" as critical message "Only folders dropped on the icon can be opened in Terminal. Everything you dropped was a file, not a folder."
+			display alert "Those aren't folders" as critical message "Only folders dropped on the icon can be opened in Terminal. " & Â
+				"Everything you dropped was a file, not a folder."
 		end if
 	end if
 end open
@@ -215,11 +217,12 @@ on OpenFolderInTerminal(theFolder, openTab)
 		do shell script "open -a Terminal"
 		delay 0.5
 		
-		OpenTerminalTab()  -- open a new tab (or a new window, if there's not already one in this space)
-		delay 0.5 -- so the new tab has time to open
+		-- open a new tab (or a new window, if there's not already one in this space)
+		if not OpenTerminalTab() then return
 		
 		set shellScript to my BuildShellScript(theFolder)
 		if shellScript is not "" then
+			delay 0.5 -- so the new tab has time to open
 			tell application "Terminal"
 				do script with command shellScript in front window
 			end tell
@@ -298,9 +301,25 @@ on OpenTerminalTab()
 		-- so we call "open -a Terminal" before calling this function, instead
 		-- set frontmost of terminal to true
 		
-		click menu item 1 of Â
-			first menu of menu item "New Tab" of Â
-			first menu of menu bar item "Shell" of Â
-			first menu bar of terminal
+		try
+			click menu item 1 of Â
+				first menu of menu item "New Tab" of Â
+				first menu of menu bar item "Shell" of Â
+				first menu bar of terminal
+			return true
+			
+		on error systemErrorMessage number systemErrorNum
+			set errorMessage to "An error occurred: " & systemErrorMessage & " (" & systemErrorNum & ")"
+			
+			if errorMessage contains "not allowed assistive access" then
+				set errorMessage to errorMessage & return & return & Â
+					"To fix this problem, open System Preferences and navigate to Security & Privacy > Accessibility. " & Â
+					"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
+					"If its checkbox is already checked, remove it from the list, then add it again."
+			end if
+			
+			display alert "Unable to open a new tab" as critical message errorMessage
+			return false
+		end try
 	end tell
 end OpenTerminalTab
