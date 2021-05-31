@@ -8,7 +8,7 @@ bundle_id="com.apple.ScriptEditor.id.${app_name// }"
 
 function usage() {
 	script_name="`basename "$0"`"
-	echo 'Builds the "$app_name" Finder toolbar script as an application.'
+	echo "Builds the \"$app_name\" Finder toolbar script as an application."
 	echo 'See README.md for installation instructions.'
 	echo
 	echo "Usage: $script_name [options]"
