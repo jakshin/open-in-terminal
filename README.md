@@ -1,47 +1,27 @@
-<p align="center">
-  <img src="Screenshots/App-Icon.png" alt="Open In Terminal Icon"/>
-</p>
+It's often handy to switch back and forth between looking at a folder's contents in Finder, and running command-line utilities in it. You can switch from command line to GUI with a simple `open .` to view your shell's working directory in Finder, but the reverse isn't as easy.
 
-It's frequently handy to switch back and forth between looking at a folder's contents graphically, and running command-line utilities in it. You can switch from command-line mode to graphical mode with a simple `open .` to view your shell's current working directory in Finder, but the reverse isn't as easy.
-
-*Except now it is!* After installing this app as a Finder toolbar button, you can click the icon in (just about) any Finder window to open a new Terminal window, with your shell's working directory automatically switched Finder's current folder. Or you can hold the **fn** key down as you click, to open the folder in a new Terminal tab, instead of a new window.
+*Except now it is!* After installing this app as a Finder toolbar button, you can click its icon in (just about) any Finder window to open a new Terminal window, with your shell's working directory automatically switched to the Finder window's folder. Or you can hold the **fn** or **shift** key down as you click, to open the folder in a new Terminal tab, instead of a new window.
 
 If you prefer [iTerm](https://iterm2.com) to Apple's Terminal, see [Open in iTerm](https://github.com/jakshin/open-in-iterm).
 
 
 ## Installation & Setup
 
-
-### Step 1: Download the files
-
-Either click GitHub's **Clone or download > Download ZIP** button above to download open-in-terminal-master.zip, unzip it, and drag the resulting folder to somewhere convenient, such as `~/AppleScripts`, or clone with Git:
+### Step 1: Clone and build
 
 ```bash
 git clone https://github.com/jakshin/open-in-terminal.git
-```
-
-
-### Step 2: Build the application
-
-Open a Terminal window in the folder which contains `Open In Terminal.applescript`, and run the following command:
-
-```bash
+cd open-in-terminal
 ./build.sh
 ```
 
 This will create `Open In Terminal.app`.
 
-A command-line utility named `modifier-keys` is incorporated into the application's bundle. The application uses it to determine which modifier keys are pressed as it is launched. The compiled binary is included in Git; if you'd like to recompile it from its C source yourself, you'll need to [install Xcode's command-line tools](https://developer.apple.com/library/ios/technotes/tn2339/_index.html), then run `make` in the `modifier-keys` folder.
-
-
-### Step 3: Drag the application into your Finder toolbar
+### Step 2: Drag the application into your Finder toolbar
 
 Hold the **command** key down and drag `Open In Terminal.app` into your Finder toolbar:
 
-![[screenshot]](Screenshots/Drag-Icon.png)
-
-
-Now you can open any Finder window's current folder in a new Terminal window just by clicking the application's icon in your Finder toolbar.
+![[Hold command and drag]](Hold command and drag.png)
 
 
 ## Uninstallation
