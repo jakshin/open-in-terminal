@@ -1,13 +1,14 @@
 #!/bin/bash -e
 # Builds the "Open In Terminal" Finder-toolbar script as an application.
 
-script_name="Open In Terminal.applescript"
-bundle_name="Open In Terminal.app"
-bundle_id="com.apple.ScriptEditor.id.OpenInTerminal"
+app_name="Open In Terminal"
+script_name="$app_name.applescript"
+bundle_name="$app_name.app"
+bundle_id="com.apple.ScriptEditor.id.${app_name// }"
 
 function usage() {
 	script_name="`basename "$0"`"
-	echo 'Builds the "Open In Terminal" Finder-toolbar script as an application.'
+	echo 'Builds the "$app_name" Finder toolbar script as an application.'
 	echo 'See README.md for installation instructions.'
 	echo
 	echo "Usage: $script_name [options]"
@@ -61,7 +62,7 @@ cd -- "$(dirname "$0")"
 
 # find some info in the script
 version="$(head -n 5 "$script_name" | grep -Eo "[0-9.]{3,}")"
-copyright="$(head -n 20 "Open In Terminal.applescript" | grep -E "^Copyright")"
+copyright="$(head -n 20 "$script_name" | grep -E "^Copyright")"
 
 if [[ -z $version || -z $copyright ]]; then
 	echo "Unable to determine bundle version and/or copyright, aborting"
