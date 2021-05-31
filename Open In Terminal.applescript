@@ -1,14 +1,14 @@
 (*
-Open In Terminal v1.7.2
+Open In Terminal v1.7.3
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
 To install the application, hold the Cmd key down and drag it into your Finder toolbar.
 
 When its icon is clicked on in the toolbar of a Finder window, it opens a new Terminal window,
-or tab if the fn key is down, and switches the shell's current working directory
+or tab if the fn or shift key is down, and switches the shell's current working directory
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
-each dropped folder will be opened in a Terminal window, or tab if the fn key is down.
+each dropped folder will be opened in a Terminal window, or tab if the fn or shift key is down.
 
 Copyright (c) 2009-2021 Jason Jackson
 
@@ -25,8 +25,8 @@ If not, see <http://www.gnu.org/licenses/>.
 *)
 
 -- Whether to open new tabs instead of new windows, by default (boolean).
--- However this is set, press the fn key while clicking the icon in your Finder toolbar,
--- or while dragging and dropping icons onto it, to invert the behavior.
+-- Press the fn or shift key while clicking the icon in your Finder toolbar,
+-- or while dragging and dropping icons onto it, to invert this setting.
 property useTabsByDefault : false
 
 -- How to tell the shell to change its working directory, e.g. "cd", "pushd", or whatever else you like.
@@ -151,11 +151,11 @@ on UseTabsThisTime()
 	set modifierKeys to do shell script quoted form of checkModifierKeysPath
 	
 	if modifierKeys contains "option" then
-		-- the Option key is down, and the Finder window will close
+		-- the option key is down, and the Finder window will close
 		return missing value
 		
-	else if modifierKeys contains "fn" then
-		-- the fn key is down, invert the default setting
+	else if modifierKeys contains "fn" or modifierKeys contains "shift" then
+		-- the fn or shift key is down, invert the default setting
 		set useTabs to not useTabsByDefault
 	else
 		-- use the default setting
@@ -215,8 +215,7 @@ on OpenFolderInTerminal(theFolder, openTab)
 		do shell script "open -a Terminal"
 		delay 0.5
 		
-		-- open a new tab (or a new window, if there's not already one in this space)
-		tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down}
+		OpenTerminalTab()  -- open a new tab (or a new window, if there's not already one in this space)
 		delay 0.5 -- so the new tab has time to open
 		
 		set shellScript to my BuildShellScript(theFolder)
@@ -281,3 +280,27 @@ on CountTerminalWindows()
 	
 	return windowCount
 end CountTerminalWindows
+
+(*
+Opens a new tab in Terminal's frontmost window, or a new Terminal window
+if there isn't already one open in this space.
+*)
+on OpenTerminalTab()
+	tell application "System Events"
+		-- we used to use a keystroke to open the tab, but that doesn't work if the shift key is down,
+		-- like if you shift+click on the app's icon and hold shift down just a bit too long
+		-- tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down}
+		
+		set terminal to application process "Terminal"
+		
+		-- normally this is needed for the click below to work right (otherwise it opens a new window,
+		-- instead of a new tab as intended), but we don't want to bring all Terminal windows forward,
+		-- so we call "open -a Terminal" before calling this function, instead
+		-- set frontmost of terminal to true
+		
+		click menu item 1 of Â
+			first menu of menu item "New Tab" of Â
+			first menu of menu bar item "Shell" of Â
+			first menu bar of terminal
+	end tell
+end OpenTerminalTab
