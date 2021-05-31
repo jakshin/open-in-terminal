@@ -61,8 +61,8 @@ function absolute_path() {
 cd -- "$(dirname "$0")"
 
 # find some info in the script
-version="$(head -n 5 "$script_name" | grep -Eo "[0-9.]{3,}")"
-copyright="$(head -n 20 "$script_name" | grep -E "^Copyright")"
+version="$(head -n 5 "$script_name" | grep -Eo "[0-9.]{3,}" || true)"
+copyright="$(head -n 20 "$script_name" | grep -E "^Copyright" || true)"
 
 if [[ -z $version || -z $copyright ]]; then
 	echo "Unable to determine bundle version and/or copyright, aborting"
