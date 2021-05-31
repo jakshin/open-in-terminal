@@ -21,7 +21,7 @@ This will create `Open In Terminal.app`.
 
 Hold the **command** key down and drag `Open In Terminal.app` into your Finder toolbar:
 
-![[Hold command and drag]](Hold command and drag.png)
+![[Hold command and drag]](Hold%20command%20and%20drag.png)
 
 
 ## Uninstallation
