@@ -18,23 +18,31 @@ function usage() {
 	exit 1
 }
 
-unset dark
+unset appearance
 
-for arg in "$@"; do
+for arg; do
 	if [[ $arg == "--dark" ]]; then
-		dark=true
+		appearance="dark"
 	elif [[ $arg == "--light" ]]; then
-		dark=false
+		appearance="light"
 	else  # anything else, including -h/--help
 		usage
 	fi
 done
 
-if [[ -z $dark ]]; then
+if [[ -z $appearance ]]; then
 	dark="$(osascript -e 'tell application "System Events" to tell appearance preferences to log dark mode is true' 2>&1)"
+	[[ $dark == true ]] && appearance="dark" || appearance="light"
 fi
 
-[[ $dark == true ]] && icon="macOS-10-dark" || icon="macOS-10-light"
+os_version="$(sw_vers -productVersion)"
+os_version="${os_version/.*/}"  # Major version only
+
+icon="macOS-$os_version-$appearance"
+
+if [[ ! -f "icon/$icon.icns" ]] && (( $os_version > 11 )); then
+	icon="macOS-11-$appearance"
+fi
 
 
 # --- Utilities ---
@@ -89,6 +97,11 @@ defaults write "$info_plist" NSHumanReadableCopyright "'$copyright'"
 
 plutil -convert xml1 "$info_plist"
 chmod 644 "$info_plist"
+
+# sign the app when running on Big Sur, or it won't work
+if (( os_version >= 11 )); then
+	codesign --force --sign - "$bundle_name"
+fi
 
 # success!
 echo Done

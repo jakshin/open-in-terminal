@@ -7,9 +7,9 @@ only preferences, New Command & New Remote Connection  open a window, bring only
 one shell window                                       open a window, bring only it to the front
 two shell windows                                      open a window, bring only it to the front
 
-only preferences window, hidden                        unhide, open a window, bring only it to the front
-one shell window, hidden                               unhide, open a window, bring only it to the front
-two shell windows, hidden                              unhide, open a window, bring only it to the front
+only preferences window, hidden                        unhide, open a window, bring only it to the front (1)
+one shell window, hidden                               unhide, open a window, bring only it to the front (1)
+two shell windows, hidden                              unhide, open a window, bring only it to the front (1)
 
 only New Remote Connection window, minimized           open a window, bring it to the front, other stays minimized
 one shell window, minimized                            open a window, bring it to the front, other stays minimized
@@ -18,7 +18,7 @@ two shell windows, one minimized                       open a window, bring only
 
 only New Remote Connection window, minimized & hidden  unhide, open window, bring it to front, other stays minimized
 one shell window, minimized & hidden                   unhide, open window, bring it to front, other stays minimized
-two shell windows, one minimized, hidden               unhide, open window, bring only it to front, other stays minimized
+two shell windows, one minimized, hidden               unhide, open window, bring only it to front, other stays minimized (2)
 
 only New Remote Connection window, full screen         open a window, bring only it to the front
 one shell window, full screen                          open a window, bring only it to the front
@@ -30,7 +30,7 @@ one shell window, in another space                     open a window in this spa
 two shell windows, one in another space                open a window in this space, bring only it to the front
 
 one shell window, in another space, hidden             unhide, open a window in this space, bring it to the front
-two shell windows, one in another space, both hidden   unhide, open a window in this space, bring only it to the front
+two shell windows, one in another space, both hidden   unhide, open a window in this space, bring only it to the front (3)
 
 only Remote Connection window, other space, minimized  open a window, bring only it to the front
 one shell window, in another space, minimized          open a window, bring only it to the front
@@ -46,7 +46,7 @@ only preferences, New Command & New Remote Connection  open a window, bring only
 one shell window                                       open a new tab, bring the window to the front
 two shell windows                                      open a new tab, bring only its window to the front
 
-only preferences window, hidden                        unhide, open a window, bring only it to the front
+only preferences window, hidden                        unhide, open a window, bring only it to the front (3)
 one shell window, hidden                               unhide, open a new tab, bring the window to the front
 two shell windows, hidden                              unhide, open a new tab, bring only its window to the front (1)
 
@@ -68,18 +68,23 @@ only New Remote Connection window, in another space    open a window, bring it t
 one shell window, in another space                     open a window, bring it to the front
 two shell windows, one in another space                open a new tab in this space's window, bring it to the front
 
-one shell window, in another space, hidden             unhide, open a window, bring only it to the front (2)
+one shell window, in another space, hidden             unhide, open a window, bring only it to the front (4)
 two shell windows, one in another space, both hidden   unhide, open a new tab, bring only its window to the front
 
 only Remote Connection window, other space, minimized  open a window, bring it to the front
-one shell window, in another space, minimized          open a window, bring it to the front (3)
-                                                         
+one shell window, in another space, minimized          open a window, bring it to the front (5)
+
 two shell windows, in another space, one minimized     open a window, bring only it to the front
 
 
-(1) on Catalina, actually brings all Terminal windows to the front
+(1) on Catalina & Big Sur, actually brings all Terminal windows to the front
 
-(2) on Catalina, actually switches spaces and opens a new tab in that window,
-    rather than opening a new window like when Terminal isn't hidden
+(2) on Big Sur (not Catalina), also brings the unminimized window to the front
 
-(3) on Catalina, also restores the minimized window in the other space
+(3) on Big Sur (not Catalina), brings all Terminal windows in the current space to the front
+
+(4) on Catalina & Big Sur, actually switches spaces and opens a new tab in that window,
+    rather than opening a new window in this space, like when Terminal isn't hidden
+
+(5) on Catalina, also restores the minimized window in the other space;
+    on Big Sur, restores the minimized window in the other space, switches spaces, opens a tab in it

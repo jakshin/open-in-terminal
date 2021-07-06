@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.7.4
+Open In Terminal v1.8.0
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -120,8 +120,11 @@ on open droppedItems
 		set droppedItem to droppedItem as alias
 		
 		if my ItemIsAFolder(droppedItem) then
-			my OpenFolderInTerminal(droppedItem, openTabs)
-			set folderWasDropped to true
+			if OpenFolderInTerminal(droppedItem, openTabs) then
+				set folderWasDropped to true
+			else
+				return
+			end if
 		end if
 	end repeat
 	
@@ -194,57 +197,64 @@ on OpenFolderInTerminal(theFolder, openTab)
 	end if
 	
 	set alreadyRunning to my TerminalIsRunning()
-	if alreadyRunning then
-		set windowCount to my CountTerminalWindows()
-	end if
 	
-	if not openTab or not alreadyRunning or windowCount is 0 then
-		if theFolder is not "" then
-			-- this always opens a new Terminal window;
-			-- its shell's CWD is set to the folder, no scripting needed
-			do shell script "open -a Terminal " & quoted form of theFolder
+	try
+		if not openTab or not alreadyRunning or not TerminalHasShellWindows() then
+			considering numeric strings
+				set versionString to system version of (system info)
+				set bigSurOrLater to versionString ³ "11"
+			end considering
+			
+			if theFolder is "" then
+				-- if there are open Terminal windows, but they're all in other spaces, this brings one of them to the front,
+				-- but doesn't necessarily switch spaces to make it visible, depending on Mission Control settings;
+				-- oh well, it won't come up during indended use (clicking an icon in a Finder window's toolbar)
+				do shell script "open -a Terminal"
+				
+			else if bigSurOrLater and alreadyRunning and TerminalHasAnyWindowsInThisSpace() then
+				-- using "open -a Terminal path" brings an extra Terminal window to the front on Big Sur,
+				-- so we use this clunkier approach as a workaround
+				my OpenTerminalWindow()
+				my SendShellScript(theFolder)
+			else
+				-- life is simpler on Catalina: this always opens a new Terminal window,
+				-- with its shell's working directory set to the passed folder, no scripting needed
+				-- (we also take this code path on Big Sur when Terminal isn't running, or has no open shell windows)
+				do shell script "open -a Terminal " & quoted form of theFolder
+			end if
 		else
-			-- if there are open Terminal windows, but they're all in other spaces,
-			-- this will bring one of those windows to the front, but not switch spaces... oh well,
-			-- it won't come up during indended use (clicking an icon in a Finder window's toolbar)
+			-- we want a new tab; Terminal is already running, and has a window (though maybe not in this space)
+			
+			-- this brings just one Terminal window to the front (but buggily bringing an extra window to the front on Big Sur, ugh),
+			-- opening a new window if there isn't one in any space, unminimized and unhiding if it needs to; like "activate",
+			-- it only switches spaces if System Preferences > Mission Control > "When switching to an application ..." is checked
 			do shell script "open -a Terminal"
+			delay 0.5
+			
+			-- open a new tab (or a new window, if there's not already one in this space)
+			my OpenTerminalTab()
+			my SendShellScript(theFolder)
 		end if
-	else
-		-- we want a new tab; Terminal is already running, and has a window (though maybe not in this space)
 		
-		-- this brings just one window to the front, opening a new window if there isn't one (in any space),
-		-- unminimized and unhiding if it needs to; like "activate", it DOESN'T switch spaces
-		do shell script "open -a Terminal"
-		delay 0.5
-		
-		-- open a new tab (or a new window, if there's not already one in this space)
-		if not OpenTerminalTab() then return
-		
-		set shellScript to my BuildShellScript(theFolder)
-		if shellScript is not "" then
-			delay 0.5 -- so the new tab has time to open
-			tell application "Terminal"
-				do script with command shellScript in front window
-			end tell
-		end if
-	end if
+	on error systemErrorMessage number systemErrorNum
+		my DisplayTerminalError(openTab, systemErrorMessage, systemErrorNum)
+		return false
+	end try
+	
+	return true
 end OpenFolderInTerminal
 
 (*
-Builds a shell script which will change the working directory to the passed path (if applicable),
-using the change-directory command configured above, and optionally clear the shell's screen.
+Sends Terminal a shell script which changes the front window's working directory to the passed path.
 theFolder should be passed as an alias.
 *)
-on BuildShellScript(theFolder)
+on SendShellScript(theFolder)
 	if theFolder is not "" then
 		set shellScript to (changeDirectoryCommand & " " & quoted form of theFolder)
 		if clearScreenCommand is not "" then set shellScript to shellScript & "; " & clearScreenCommand
-	else
-		set shellScript to ""
+		tell application "Terminal" to do script with command shellScript in front window
 	end if
-	
-	return shellScript
-end BuildShellScript
+end SendShellScript
 
 (*
 Determines whether or not the Terminal application is already running.
@@ -258,12 +268,11 @@ on TerminalIsRunning()
 end TerminalIsRunning
 
 (*
-Counts open Terminal windows, or really tabs because that's how Terminal counts windows,
-which is fine for our purposes here, because we only care whether there are zero or not.
-Includes minimized and hidden windows, in any space, but excludes non-shell windows
-like preferences, "New Command" and "New Remote Connection".
+Reports whether Terminal has open shell windows.
+Includes shell windows in any space, even if they're minimized or hidden;
+excludes non-shell windows like preferences, "New Command" and "New Remote Connection".
 *)
-on CountTerminalWindows()
+on TerminalHasShellWindows()
 	tell application "Terminal"
 		-- Terminal includes "New Command" and "New Remote Connection" once they've been opened,
 		-- even if they were later closed, so we filter them out below
@@ -274,52 +283,96 @@ on CountTerminalWindows()
 				try
 					-- an error is raised when trying to get a non-shell window's selected tab
 					set selectedTab to win's selected tab
+					return true
 				on error
-					set windowCount to windowCount - 1
+					-- ignore it
 				end try
 			end repeat
 		end if
 	end tell
 	
-	return windowCount
-end CountTerminalWindows
+	return false
+end TerminalHasShellWindows
 
 (*
-Opens a new tab in Terminal's frontmost window, or a new Terminal window
-if there isn't already one open in this space.
+Reports whether Terminal has any open windows in this space.
+Includes any kind of window, not just shell windows.
+Includes windows minimized from any space, and hidden windows.
+*)
+on TerminalHasAnyWindowsInThisSpace()
+	-- an error is raised here if Terminal is not allowed assistive access
+	
+	tell application "System Events"
+		tell process "Terminal"
+			set windowCount to count of windows
+			return windowCount > 0
+		end tell
+	end tell
+end TerminalHasAnyWindowsInThisSpace
+
+(*
+Opens a new tab in Terminal's frontmost window, or a new Terminal window if there isn't yet one in this space.
+Terminal must already be running, or this will error out.
 *)
 on OpenTerminalTab()
 	tell application "System Events"
 		-- we used to use a keystroke to open the tab, but that doesn't work if the shift key is down,
-		-- like if you shift+click on the app's icon and hold shift down just a bit too long
-		-- tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down}
+		-- like if you shift+click on the app's icon and hold shift down just a bit too long:
+		-- // tell application "System Events" to tell process "Terminal" to keystroke "t" using {command down}
 		
 		set terminal to application process "Terminal"
 		
-		-- normally this is needed for the click below to work right (otherwise it opens a new window,
+		-- normally setting frontmost is needed for the click below to work right (otherwise it opens a new window,
 		-- instead of a new tab as intended), but we don't want to bring all Terminal windows forward,
-		-- so we call "open -a Terminal" before calling this function, instead
-		-- set frontmost of terminal to true
+		-- so we call "open -a Terminal" before calling this function, instead:
+		-- // set frontmost of terminal to true
 		
-		try
-			click menu item 1 of Â
-				first menu of menu item "New Tab" of Â
-				first menu of menu bar item "Shell" of Â
-				first menu bar of terminal
-			return true
-			
-		on error systemErrorMessage number systemErrorNum
-			set errorMessage to "An error occurred: " & systemErrorMessage & " (" & systemErrorNum & ")"
-			
-			if errorMessage contains "not allowed assistive access" then
-				set errorMessage to errorMessage & return & return & Â
-					"To fix this problem, open System Preferences and navigate to Security & Privacy > Accessibility. " & Â
-					"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
-					"If its checkbox is already checked, remove it from the list, then add it again."
-			end if
-			
-			display alert "Unable to open a new tab" as critical message errorMessage
-			return false
-		end try
+		click menu item 1 of Â
+			first menu of menu item "New Tab" of Â
+			first menu of menu bar item "Shell" of Â
+			first menu bar of terminal
+		
+		delay 0.5 -- give the tab some time to open
 	end tell
 end OpenTerminalTab
+
+(*
+Opens a new Terminal window, and brings just it to the front. Used on Big Sur,
+where an Apple bug makes "open -a Terminal path" bring an annoying extra window to the front.
+Terminal must already be running, or this will error out.
+*)
+on OpenTerminalWindow()
+	tell application "System Events"
+		set terminal to application process "Terminal"
+		
+		click menu item 1 of Â
+			first menu of menu item "New Window" of Â
+			first menu of menu bar item "Shell" of Â
+			first menu bar of terminal
+		
+		delay 0.5 -- give the window some time to open
+	end tell
+end OpenTerminalWindow
+
+(*
+Displays an error message in an alert when we fail to open a Terminal window/tab.
+Adds some error-specific text when the error is that we're not allowed assistive access.
+*)
+on DisplayTerminalError(openingTab, systemErrorMessage, systemErrorNum)
+	if openingTab then
+		set title to "Unable to open a new Terminal tab"
+	else
+		set title to "Unable to open a new Terminal window"
+	end if
+	
+	set errorMessage to "An error occurred: " & systemErrorMessage & " (" & systemErrorNum & ")"
+	
+	if errorMessage contains "not allowed assistive access" then
+		set errorMessage to errorMessage & return & return & Â
+			"To fix this problem, open System Preferences and navigate to Security & Privacy > Accessibility. " & Â
+			"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
+			"If its checkbox is already checked, remove it from the list, then add it again."
+	end if
+	
+	display alert title as critical message errorMessage
+end DisplayTerminalError
