@@ -31,6 +31,15 @@ Open System Preferences, and navigate to **Security & Privacy > Privacy > Access
 
 If you skip this step, you may receive an error that "Open In Terminal is not allowed assistive access" when you attempt to use the app.
 
+### Step 4: Install the wrapper script (optional)
+
+The `term` shell script allows launching `Open In Terminal.app` from the command line, and specifying the new shell's working directory instead of getting it from a Finder window. To install it, copy or symlink it to a directory that's in your shell's path, or add the directory it's in to your path. For example, to create a symlink in `/usr/local/bin`, run this from the directory containing the script:
+
+```bash
+[[ -d /usr/local/bin ]] || sudo mkdir -p /usr/local/bin
+sudo ln -s "$(pwd -P)/term" /usr/local/bin/term
+```
+
 
 ## Uninstallation
 
