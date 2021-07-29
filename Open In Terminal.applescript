@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.8.0
+Open In Terminal v1.8.1
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -38,6 +38,10 @@ property changeDirectoryCommand : " cd"
 -- e.g. "clear"; set to an empty string for no screen clearing.
 property clearScreenCommand : "clear; printf '\\e[3J'"
 
+-- Needed in order to receive command line parameters
+use framework "Foundation"
+use scripting additions
+
 (*
 Opens a Terminal window/tab in the frontmost Finder window's directory,
 when the script's toolbar icon is clicked in Finder (or when it is launched directly).
@@ -45,6 +49,17 @@ when the script's toolbar icon is clicked in Finder (or when it is launched dire
 on run
 	set openTab to my UseTabsThisTime()
 	if openTab is missing value then return
+	
+	set args to (current application's NSProcessInfo's processInfo's arguments) as list
+	if args's first item is "/usr/bin/osascript" then set args to rest of args
+	set args to rest of args -- skip script/app name
+	
+	if (count of args) > 0 then
+		set directoryStr to args's first item
+		set options to rest of args
+		my RunWithArgs(openTab, directoryStr, options)
+		return
+	end if
 	
 	set errorMessage to ""
 	tell application "Finder"
@@ -120,11 +135,8 @@ on open droppedItems
 		set droppedItem to droppedItem as alias
 		
 		if my ItemIsAFolder(droppedItem) then
-			if OpenFolderInTerminal(droppedItem, openTabs) then
-				set folderWasDropped to true
-			else
-				return
-			end if
+			set folderWasDropped to true
+			if not OpenFolderInTerminal(droppedItem, openTabs) then return
 		end if
 	end repeat
 	
@@ -169,6 +181,39 @@ on UseTabsThisTime()
 	
 	return useTabs
 end UseTabsThisTime
+
+(*
+Run using the command-line arguments instead of a Finder window.
+This is rudimentary, a bit weird, and doesn't have any error checking/reporting,
+because it's meant only to enable the accompanying "term" shell script,
+and this app's use in Context Menu (https://langui.net/context-menu).
+*)
+on RunWithArgs(openTab, directoryStr, options)
+	set optionsStarted to false
+
+	repeat with opt in options
+		set opt to opt as string
+		
+		-- Context Menu passes all selected directories (or the current directory) as arguments,
+		-- so to distinguish a real option from a directory named like an option (e.g. "--window"),
+		-- we require an empty argument to signal that option arguments have started
+		if opt is "" then set optionsStarted to true
+		
+		if optionsStarted then
+			if opt is "-t" or opt is "--tab" then
+				set openTab to true
+			else if opt is "-w" or opt is "--window" then
+				set openTab to false
+			end if
+		end if
+	end repeat
+	
+	if directoryStr is not "" then
+		set directory to directoryStr as POSIX file
+		set dirAlias to directory as alias
+		if ItemIsAFolder(dirAlias) then my OpenFolderInTerminal(dirAlias, openTab)
+	end if
+end RunWithArgs
 
 (*
 Determines whether or not an item is a folder.
