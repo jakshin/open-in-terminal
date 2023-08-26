@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.8.1
+Open In Terminal v1.8.2
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -10,7 +10,7 @@ or tab if the fn or shift key is down, and switches the shell's current working 
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
 each dropped folder will be opened in a Terminal window, or tab if the fn or shift key is down.
 
-Copyright (c) 2009-2021 Jason Jackson
+Copyright (c) 2009-2023 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -190,7 +190,7 @@ and this app's use in Context Menu (https://langui.net/context-menu).
 *)
 on RunWithArgs(openTab, directoryStr, options)
 	set optionsStarted to false
-
+	
 	repeat with opt in options
 		set opt to opt as string
 		
@@ -253,7 +253,7 @@ on OpenFolderInTerminal(theFolder, openTab)
 			if theFolder is "" then
 				-- if there are open Terminal windows, but they're all in other spaces, this brings one of them to the front,
 				-- but doesn't necessarily switch spaces to make it visible, depending on Mission Control settings;
-				-- oh well, it won't come up during indended use (clicking an icon in a Finder window's toolbar)
+				-- oh well, it won't come up during intended use (clicking an icon in a Finder window's toolbar)
 				do shell script "open -a Terminal"
 				
 			else if bigSurOrLater and alreadyRunning and TerminalHasAnyWindowsInThisSpace() then
@@ -413,10 +413,20 @@ on DisplayTerminalError(openingTab, systemErrorMessage, systemErrorNum)
 	set errorMessage to "An error occurred: " & systemErrorMessage & " (" & systemErrorNum & ")"
 	
 	if errorMessage contains "not allowed assistive access" then
-		set errorMessage to errorMessage & return & return & Â
-			"To fix this problem, open System Preferences and navigate to Security & Privacy > Accessibility. " & Â
-			"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
-			"If its checkbox is already checked, remove it from the list, then add it again."
+		set versionString to system version of (system info)
+		set venturaOrLater to versionString ³ "13"
+		
+		if venturaOrLater then
+			set errorMessage to errorMessage & return & return & Â
+				"To fix this problem, open System Settings and navigate to Privacy & Security > Accessibility. " & Â
+				"Find Open In Terminal in the list, and toggle it to enabled." & return & return & Â
+				"If it's already enabled, remove it from the list, then add it again."
+		else
+			set errorMessage to errorMessage & return & return & Â
+				"To fix this problem, open System Preferences and navigate to Security & Privacy > Privacy tab > Accessibility. " & Â
+				"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
+				"If its checkbox is already checked, remove it from the list, then add it again."
+		end if
 	end if
 	
 	display alert title as critical message errorMessage
