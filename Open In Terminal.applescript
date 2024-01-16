@@ -1,5 +1,5 @@
 (*
-Open In Terminal v1.8.2
+Open In Terminal v1.8.3
 
 This is a Finder-toolbar script, which opens Terminal windows conveniently.
 To build it as an application, run build.sh; Open In Terminal.app will be created.
@@ -10,7 +10,7 @@ or tab if the fn or shift key is down, and switches the shell's current working 
 to the Finder window's folder. You can also drag and drop folders onto its toolbar icon;
 each dropped folder will be opened in a Terminal window, or tab if the fn or shift key is down.
 
-Copyright (c) 2009-2023 Jason Jackson
+Copyright (c) 2009-2024 Jason Jackson
 
 This program is free software: you can redistribute it and/or modify it under the terms
 of the GNU General Public License as published by the Free Software Foundation,
@@ -109,8 +109,13 @@ on run
 					end if
 				end if
 			end try
-		on error
-			-- there is no frontmost Finder window (including minimized windows & windows in other spaces),
+		on error systemErrorMessage number systemErrorNum
+			if systemErrorMessage contains "Not authorized to send Apple events" then
+				my DisplayTerminalError(openTab, systemErrorMessage, systemErrorNum)
+				return
+			end if
+			
+			-- apparently there is no frontmost Finder window (including minimized windows & windows in other spaces),
 			-- or it's not an ordinary file-browser window; open a Terminal window/tab, but don't change its directory
 			set currentFolder to ""
 		end try
@@ -241,10 +246,11 @@ on OpenFolderInTerminal(theFolder, openTab)
 		set theFolder to POSIX path of theFolder
 	end if
 	
-	set alreadyRunning to my TerminalIsRunning()
-	
 	try
-		if not openTab or not alreadyRunning or not TerminalHasShellWindows() then
+		set alreadyRunning to my TerminalIsRunning()
+		set hasShellWindows to my TerminalHasShellWindows() -- call here so we know right away if we don't have automation permission for Terminal
+		
+		if not openTab or not alreadyRunning or not hasShellWindows then
 			considering numeric strings
 				set versionString to system version of (system info)
 				set bigSurOrLater to versionString ³ "11"
@@ -345,8 +351,6 @@ Includes any kind of window, not just shell windows.
 Includes windows minimized from any space, and hidden windows.
 *)
 on TerminalHasAnyWindowsInThisSpace()
-	-- an error is raised here if Terminal is not allowed assistive access
-	
 	tell application "System Events"
 		tell process "Terminal"
 			set windowCount to count of windows
@@ -401,9 +405,14 @@ end OpenTerminalWindow
 
 (*
 Displays an error message in an alert when we fail to open a Terminal window/tab.
-Adds some error-specific text when the error is that we're not allowed assistive access.
+Adds some error-specific explanatory text when possible.
 *)
 on DisplayTerminalError(openingTab, systemErrorMessage, systemErrorNum)
+	considering numeric strings
+		set versionString to system version of (system info)
+		set venturaOrLater to versionString ³ "13"
+	end considering
+	
 	if openingTab then
 		set title to "Unable to open a new Terminal tab"
 	else
@@ -413,19 +422,31 @@ on DisplayTerminalError(openingTab, systemErrorMessage, systemErrorNum)
 	set errorMessage to "An error occurred: " & systemErrorMessage & " (" & systemErrorNum & ")"
 	
 	if errorMessage contains "not allowed assistive access" then
-		set versionString to system version of (system info)
-		set venturaOrLater to versionString ³ "13"
-		
 		if venturaOrLater then
 			set errorMessage to errorMessage & return & return & Â
 				"To fix this problem, open System Settings and navigate to Privacy & Security > Accessibility. " & Â
-				"Find Open In Terminal in the list, and toggle it to enabled." & return & return & Â
-				"If it's already enabled, remove it from the list, then add it again."
+				"Find Open In Terminal in the list, and turn its toggle switch on." & return & return & Â
+				"If its toggle switch is already on, remove Open In Terminal from the list, then add it again."
 		else
 			set errorMessage to errorMessage & return & return & Â
 				"To fix this problem, open System Preferences and navigate to Security & Privacy > Privacy tab > Accessibility. " & Â
 				"Find Open In Terminal in the list, and check its checkbox." & return & return & Â
-				"If its checkbox is already checked, remove it from the list, then add it again."
+				"If its checkbox is already checked, remove Open In Terminal from the list, then add it again."
+		end if
+		
+	else if errorMessage contains "Not authorized to send Apple events to" then
+		set eventsTo to "events to"
+		set pos to (offset of eventsTo in systemErrorMessage) + ((eventsTo's length) + 1)
+		set appName to systemErrorMessage's text pos thru ((systemErrorMessage's length) - 1)
+		
+		if venturaOrLater then
+			set errorMessage to errorMessage & return & return & Â
+				"To fix this problem, open System Settings and navigate to Privacy & Security > Automation. " & Â
+				"Find Open In Terminal in the list, and turn on its toggle switch for \"" & appName & "\"."
+		else
+			set errorMessage to errorMessage & return & return & Â
+				"To fix this problem, open System Preferences and navigate to Security & Privacy > Privacy tab > Automation. " & Â
+				"Find Open In Terminal in the list, and check its checkbox for \"" & appName & "\"."
 		end if
 	end if
 	
