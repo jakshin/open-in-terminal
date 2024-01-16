@@ -7,31 +7,42 @@ If you prefer [iTerm](https://iterm2.com) to Apple's Terminal, see [Open in iTer
 
 ## Installation & Setup
 
-### Step 1: Clone and build
+### Step 1: Get the code and build the app
 
-```bash
-git clone https://github.com/jakshin/open-in-terminal.git
-cd open-in-terminal
-./build.sh
-```
+Either clone the repo, or download it and extract the zip file.   
+Then run `build.sh`, which will create `Open In Terminal.app`.
 
-This will create `Open In Terminal.app`.
+The build script tries to detect whether you have macOS's dark mode enabled, to decide which icon to build the app with, so you may see a popup asking to grant Terminal access to control System Events. If you say no (or if you've previously declined to grant Terminal this access), the build script will use the light-mode icon by default. You can pass the `--dark` or `--light` option to the build script to manually select an icon, avoiding the need for the script to try to detect dark mode.
 
-### Step 2: Drag the application into your Finder toolbar
+<div align="center">
+	<img width=342 alt="Screenshot of popup" src="screenshots/terminal-control-system-events.png">
+</div>
 
-Hold the **command** key down and drag `Open In Terminal.app` into your Finder toolbar:
+### Step 2: Allow assistive access
 
-![[Hold command and drag]](Hold%20command%20and%20drag.png)
-
-### Step 3: Allow assistive access
-
-Open System Preferences, and navigate to **Security & Privacy > Privacy > Accessibility**. If the lock icon in the lower left is closed, click it and enter your password. Drag `Open In Terminal.app` into the right-hand section of the System Preferences window, and ensure that its checkbox is checked:
-
-![[screenshot]](Allow%20assistive%20access.png)
-
+Open **System Settings**, and navigate to **Privacy & Security > Accessibility**. Drag `Open In Terminal.app` into the right-hand section of the System Settings window, and ensure that its toggle switch is turned on:   
+![[Screenshot of Accessibility settings]](screenshots/accessibility-settings.png)   
 If you skip this step, you may receive an error that "Open In Terminal is not allowed assistive access" when you attempt to use the app.
 
-### Step 4: Install the wrapper script (optional)
+### Step 3: Allow automation access
+
+Launch the app for the first time. You'll see a series of popups asking to grant it access to control Finder, System Events, and Terminal. You'll need to allow each, or Open In Terminal won't be able to do its thing:
+
+<div align-"center">
+	<img width=256 alt="Screenshot of popup" src="screenshots/control-finder.png">
+	<img width=256 alt="Screenshot of popup" src="screenshots/control-system-events.png">
+	<img width=256 alt="Screenshot of popup" src="screenshots/control-terminal.png">
+</div>
+
+If you accidentally don't allow access to any of these apps, you can fix it in **System Settings**, on the **Privacy & Security > Automation** screen:   
+![[Screenshot of Automation settings]](screenshots/automation-settings.png)
+
+### Step 4: Drag the application into your Finder toolbar
+
+Hold the **command** key down and drag `Open In Terminal.app` into your Finder toolbar:   
+![[Screenshot of holding Command and dragging]](screenshots/hold-command-and-drag.png)
+
+### Step 5: Install the wrapper script (optional)
 
 The `term` shell script allows launching `Open In Terminal.app` from the command line, and specifying the new shell's working directory instead of getting it from a Finder window. To install it, copy or symlink it to a directory that's in your shell's path, or add the directory it's in to your path. For example, to create a symlink in `/usr/local/bin`, run this from the directory containing the script:
 
