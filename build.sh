@@ -36,7 +36,7 @@ if [[ -z $appearance ]]; then
 	else
 		echo "Could not detect whether dark mode is enabled, due to this error:"
 		echo " ${dark//*execution error:/}"
-		echo -e "\nThe application will be build with an icon for light mode, by default."
+		echo -e "\nThe application will be built with an icon for light mode, by default."
 		echo -e "Pass the --light or --dark option to select an icon manually.\n"
 		appearance="light"
 	fi
