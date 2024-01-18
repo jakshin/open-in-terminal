@@ -110,5 +110,23 @@ if (( os_version >= 11 )); then
 	codesign --force --sign - "$bundle_name"
 fi
 
+# reset the app's Accessibility approval status; this avoids the need to remove & re-add the app,
+# although its checkbox still must be checked again
+attempt=0
+result=""
+
+while true; do
+	(( attempt++ ))
+	if result="$(tccutil reset Accessibility "$bundle_id" 2>&1)"; then
+		echo "$result"
+		break
+	elif [[ $attempt == 5 ]]; then
+		echo "$result" 1>&2  # Give up, but don't abort the build
+		break
+	else
+		sleep 1  # Try again
+	fi
+done
+
 # success!
 echo Done
