@@ -28,13 +28,21 @@ function usage() {
 }
 
 # output styles
-header_color='\033[1;36m'
-error_color='\033[0;31m'
-bold='\033[1m'
-normal='\033[0m'
+if [[ -z $NO_COLOR ]]; then
+	header_color='\033[0;1;36m'
+	error_color='\033[0;1;31m'
+	bold='\033[1m'
+	normal='\033[0m'
+else
+	header_color=''
+	error_color=''
+	bold=''
+	normal=''
+fi
 
 # parse arguments
-unset end_opts directory tabOrWindow
+unset end_opts directory
+tab_or_window=()
 
 for arg; do
 	if [[ $end_opts == true || $arg != -* ]]; then
@@ -52,9 +60,9 @@ for arg; do
 		usage true
 		exit 0
 	elif [[ $arg == "-t" || $arg == "--tab" ]]; then
-		tabOrWindow="$arg"
+		tab_or_window=("$arg")
 	elif [[ $arg == "-w" || $arg == "--window" ]]; then
-		tabOrWindow="$arg"
+		tab_or_window=("$arg")
 	else
 		echo -e "${error_color}Error: Invalid option: ${arg}${normal}"
 		usage
@@ -84,5 +92,5 @@ if [[ ${directory:0:1} != "/" ]]; then
 fi
 
 # do the things
-open -nga "Open in Terminal" --args "$directory" "" $tabOrWindow
+open -nga "Open in Terminal" --args "$directory" "" "${tab_or_window[@]}"
 sleep 1
